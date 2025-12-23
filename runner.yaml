@@ -15,7 +15,7 @@ on:
 steps:
   # Pre-build step
   setup:
-    type: Pre
+    type: pre
     shell: sh
     scripts:
       - echo "Setting up build environment..."
@@ -25,7 +25,7 @@ steps:
   
   # Main build/test step
   test:
-    type: Exec
+    type: exec
     shell: sh
     scripts:
       - echo "Running tests..."
@@ -38,7 +38,7 @@ steps:
   
   # Build step
   build:
-    type: Exec
+    type: exec
     shell: sh
     scripts:
       - echo "Building application..."
@@ -48,7 +48,7 @@ steps:
   
   # Post-build cleanup
   cleanup:
-    type: Post
+    type: post
     shell: sh
     scripts:
       - echo "Cleaning up..."
