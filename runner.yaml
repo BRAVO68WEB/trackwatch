@@ -18,9 +18,9 @@ steps:
     type: pre
     shell: sh
     scripts:
-      - echo "Setting up build environment..."
-      - echo "CI_JOB_ID=${CI_JOB_ID}"
-      - echo "CI_REPO_NAME=${CI_REPO_NAME}"
+      - 'echo "Setting up build environment..."'
+      - 'echo "CI_JOB_ID=${CI_JOB_ID}"'
+      - 'echo "CI_REPO_NAME=${CI_REPO_NAME}"'
     continue_on_error: false
   
   # Main build/test step
@@ -28,12 +28,12 @@ steps:
     type: exec
     shell: sh
     scripts:
-      - echo "Running tests..."
-      - echo "Test 1: Checking environment"
-      - env | grep CI
-      - echo "Test 2: Simple command"
-      - echo "Hello from CI Runner!"
-      - echo "All tests passed!"
+      - 'echo "Running tests..."'
+      - 'echo "Test 1: Checking environment"'
+      - 'env | grep CI'
+      - 'echo "Test 2: Simple command"'
+      - 'echo "Hello from CI Runner!"'
+      - 'echo "All tests passed!"'
     continue_on_error: false
   
   # Build step
@@ -41,9 +41,9 @@ steps:
     type: exec
     shell: sh
     scripts:
-      - echo "Building application..."
-      - echo "Build artifacts would go here"
-      - echo "Build completed successfully"
+      - 'echo "Building application..."'
+      - 'echo "Build artifacts would go here"'
+      - 'echo "Build completed successfully"'
     continue_on_error: false
   
   # Post-build cleanup
@@ -51,12 +51,11 @@ steps:
     type: post
     shell: sh
     scripts:
-      - echo "Cleaning up..."
-      - echo "Cleanup completed"
+      - 'echo "Cleaning up..."'
+      - 'echo "Cleanup completed"'
     continue_on_error: true  # Don't fail job if cleanup fails
 
 global_env:
   CI: "true"
   TEST_MODE: "true"
   BUILD_NUMBER: "1"
-
