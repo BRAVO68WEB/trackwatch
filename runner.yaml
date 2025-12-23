@@ -1,0 +1,62 @@
+# Example runner.yaml for testing
+# This file can be used in a test repository
+
+image:
+  name: alpine
+  tag: latest
+  pull_policy: IfNotPresent
+
+on:
+  push:
+    - "*"  # Run on all branches
+  tag:
+    - "v*"  # Run on version tags
+
+steps:
+  # Pre-build step
+  setup:
+    step_type: Pre
+    shell: sh
+    scripts:
+      - echo "Setting up build environment..."
+      - echo "CI_JOB_ID=${CI_JOB_ID}"
+      - echo "CI_REPO_NAME=${CI_REPO_NAME}"
+    continue_on_error: false
+  
+  # Main build/test step
+  test:
+    step_type: Exec
+    shell: sh
+    scripts:
+      - echo "Running tests..."
+      - echo "Test 1: Checking environment"
+      - env | grep CI
+      - echo "Test 2: Simple command"
+      - echo "Hello from CI Runner!"
+      - echo "All tests passed!"
+    continue_on_error: false
+  
+  # Build step
+  build:
+    step_type: Exec
+    shell: sh
+    scripts:
+      - echo "Building application..."
+      - echo "Build artifacts would go here"
+      - echo "Build completed successfully"
+    continue_on_error: false
+  
+  # Post-build cleanup
+  cleanup:
+    step_type: Post
+    shell: sh
+    scripts:
+      - echo "Cleaning up..."
+      - echo "Cleanup completed"
+    continue_on_error: true  # Don't fail job if cleanup fails
+
+global_env:
+  CI: "true"
+  TEST_MODE: "true"
+  BUILD_NUMBER: "1"
+
