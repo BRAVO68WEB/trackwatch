@@ -35,8 +35,8 @@ steps:
         echo "Commit: ${CI_COMMIT_SHA}"
         echo "Branch: ${CI_REF_NAME}"
       - |
-        # Install build dependencies if needed (Alpine Linux)
-        apk add --no-cache make || echo "make already available"
+        # Install build dependencies if needed (Debian)
+        apt-get update -qq && apt-get install -y -qq make file || echo "Build tools already available"
       - |
         # Verify source files exist
         ls -la
@@ -173,9 +173,9 @@ steps:
           cp build-info.txt "dist/build-info.txt"
         fi
         
-        # Create checksums
+        # Create checksums (Debian has sha256sum by default)
         cd dist
-        sha256sum * > checksums.txt || shasum -a 256 * > checksums.txt
+        sha256sum * > checksums.txt
         cat checksums.txt
         
         echo "Artifacts ready in dist/:"
