@@ -1,61 +1,199 @@
-# Example runner.yaml for testing
-# This file can be used in a test repository
+# CI Runner configuration for trackwatch
+# Builds a C++ stopwatch application for Linux AMD64
 
 image:
-  name: alpine
-  tag: latest
-  pull_policy: IfNotPresent
+  name: "gcc"
+  tag: "13-alpine"
+  pull_policy: "IfNotPresent"
 
 on:
   push:
-    - "*"  # Run on all branches
+    - "main"
+    - "develop"
   tag:
-    - "v*"  # Run on version tags
-
-steps:
-  # Pre-build step
-  setup:
-    type: pre
-    shell: sh
-    scripts:
-      - 'echo "Setting up build environment..."'
-      - 'echo "CI_JOB_ID=${CI_JOB_ID}"'
-      - 'echo "CI_REPO_NAME=${CI_REPO_NAME}"'
-    continue_on_error: false
-  
-  # Main build/test step
-  test:
-    type: exec
-    shell: sh
-    scripts:
-      - 'echo "Running tests..."'
-      - 'echo "Test 1: Checking environment"'
-      - 'env | grep CI'
-      - 'echo "Test 2: Simple command"'
-      - 'echo "Hello from CI Runner!"'
-      - 'echo "All tests passed!"'
-    continue_on_error: false
-  
-  # Build step
-  build:
-    type: exec
-    shell: sh
-    scripts:
-      - 'echo "Building application..."'
-      - 'echo "Build artifacts would go here"'
-      - 'echo "Build completed successfully"'
-    continue_on_error: false
-  
-  # Post-build cleanup
-  cleanup:
-    type: post
-    shell: sh
-    scripts:
-      - 'echo "Cleaning up..."'
-      - 'echo "Cleanup completed"'
-    continue_on_error: true  # Don't fail job if cleanup fails
+    - "v*"
 
 global_env:
-  CI: "true"
-  TEST_MODE: "true"
-  BUILD_NUMBER: "1"
+  CXX: "g++"
+  CXXFLAGS: "-std=c++17 -Wall -Wextra -O2"
+  BUILD_TARGET: "linux-amd64"
+
+timeout: 1800  # 30 minutes
+
+steps:
+  setup:
+    type: "pre"
+    shell: "sh"
+    scripts:
+      - |
+        echo "=== Build Environment Setup ==="
+        echo "Compiler: $(g++ --version | head -n 1)"
+        echo "OS: $(uname -a)"
+        echo "Architecture: $(uname -m)"
+        echo "Job ID: ${CI_JOB_ID}"
+        echo "Repository: ${CI_REPO_OWNER}/${CI_REPO_NAME}"
+        echo "Commit: ${CI_COMMIT_SHA}"
+        echo "Branch: ${CI_REF_NAME}"
+      - |
+        # Install build dependencies if needed (Alpine Linux)
+        apk add --no-cache make || echo "make already available"
+      - |
+        # Verify source files exist
+        ls -la
+        test -f main.cpp || (echo "Error: main.cpp not found" && exit 1)
+        test -f main_test.cpp || echo "Warning: main_test.cpp not found"
+        test -f doctest.h || echo "Warning: doctest.h not found"
+        test -f Makefile || echo "Warning: Makefile not found"
+    continue_on_error: false
+
+  test:
+    type: "exec"
+    shell: "sh"
+    scripts:
+      - |
+        echo "=== Running Tests ==="
+        if [ -f main_test.cpp ] && [ -f doctest.h ]; then
+          echo "Compiling and running tests..."
+          g++ -std=c++17 -pthread main_test.cpp -o trackwatch_test
+          ./trackwatch_test
+          TEST_EXIT_CODE=$?
+          if [ $TEST_EXIT_CODE -ne 0 ]; then
+            echo "Tests failed with exit code $TEST_EXIT_CODE"
+            exit $TEST_EXIT_CODE
+          fi
+          echo "All tests passed!"
+        else
+          echo "Test files not found, skipping tests"
+        fi
+    continue_on_error: false
+    timeout: 300  # 5 minutes
+
+  build:
+    type: "exec"
+    shell: "sh"
+    scripts:
+      - |
+        echo "=== Building trackwatch ==="
+        # Clean any previous builds
+        rm -f trackwatch trackwatch_test
+        
+        # Build the binary
+        echo "Compiling main.cpp..."
+        g++ -std=c++17 -Wall -Wextra -O2 -o trackwatch main.cpp
+        
+        # Verify binary was created
+        if [ ! -f trackwatch ]; then
+          echo "Error: Binary 'trackwatch' was not created"
+          exit 1
+        fi
+        
+        # Make binary executable
+        chmod +x trackwatch
+        
+        # Display binary information
+        echo "Binary created successfully:"
+        ls -lh trackwatch
+        file trackwatch
+        
+        # Test the binary briefly
+        echo "Testing binary execution..."
+        timeout 2 ./trackwatch || true  # Run for 2 seconds then kill
+        
+        # Create build info
+        VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
+        COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+        BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+        
+        echo "Build Info:" > build-info.txt
+        echo "Version: $VERSION" >> build-info.txt
+        echo "Commit: $COMMIT" >> build-info.txt
+        echo "Build Time: $BUILD_TIME" >> build-info.txt
+        echo "Target: linux-amd64" >> build-info.txt
+        echo "Compiler: $(g++ --version | head -n 1)" >> build-info.txt
+        
+        cat build-info.txt
+    continue_on_error: false
+
+  verify:
+    type: "exec"
+    shell: "sh"
+    scripts:
+      - |
+        echo "=== Verifying Binary ==="
+        if [ ! -f trackwatch ]; then
+          echo "Error: Binary not found"
+          exit 1
+        fi
+        
+        # Check binary type
+        echo "Binary type:"
+        file trackwatch
+        
+        # Check binary size
+        echo "Binary size:"
+        ls -lh trackwatch
+        
+        # Verify it's a Linux binary
+        if ! file trackwatch | grep -q "ELF.*Linux"; then
+          echo "Warning: Binary does not appear to be a Linux ELF binary"
+        fi
+        
+        # Verify it's x86_64/amd64
+        if ! file trackwatch | grep -q "x86-64\|x86_64\|AMD64"; then
+          echo "Warning: Binary does not appear to be AMD64"
+        fi
+        
+        echo "Binary verification complete"
+    continue_on_error: false
+    when: "on_success"
+
+  package:
+    type: "post"
+    shell: "sh"
+    scripts:
+      - |
+        echo "=== Packaging Artifacts ==="
+        # Create artifacts directory
+        mkdir -p dist
+        
+        # Copy binary to dist with version info
+        VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
+        COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+        
+        # Create versioned binary name
+        BINARY_NAME="trackwatch-${VERSION}-linux-amd64"
+        cp trackwatch "dist/${BINARY_NAME}"
+        chmod +x "dist/${BINARY_NAME}"
+        
+        # Create symlink for latest
+        ln -sf "${BINARY_NAME}" "dist/trackwatch-latest-linux-amd64"
+        
+        # Copy build info
+        if [ -f build-info.txt ]; then
+          cp build-info.txt "dist/build-info.txt"
+        fi
+        
+        # Create checksums
+        cd dist
+        sha256sum * > checksums.txt || shasum -a 256 * > checksums.txt
+        cat checksums.txt
+        
+        echo "Artifacts ready in dist/:"
+        ls -lh dist/
+    continue_on_error: false
+    when: "on_success"
+    artifacts:
+      - "dist/**/*"
+      - "build-info.txt"
+
+  cleanup:
+    type: "post"
+    shell: "sh"
+    scripts:
+      - |
+        echo "=== Cleanup ==="
+        # Remove test binaries
+        rm -f trackwatch_test
+        echo "Cleanup completed"
+    continue_on_error: true
+    when: "always"
