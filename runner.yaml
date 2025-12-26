@@ -45,7 +45,7 @@ steps:
         test -f doctest.h || echo "Warning: doctest.h not found"
         test -f Makefile || echo "Warning: Makefile not found"
     continue_on_error: false
-
+  
   test:
     type: "exec"
     shell: "sh"
@@ -67,7 +67,7 @@ steps:
         fi
     continue_on_error: false
     timeout: 300  # 5 minutes
-
+  
   build:
     type: "exec"
     shell: "sh"
@@ -113,7 +113,7 @@ steps:
         
         cat build-info.txt
     continue_on_error: false
-
+  
   verify:
     type: "exec"
     shell: "sh"
@@ -132,16 +132,6 @@ steps:
         # Check binary size
         echo "Binary size:"
         ls -lh trackwatch
-        
-        # Verify it's a Linux binary
-        if ! file trackwatch | grep -q "ELF.*Linux"; then
-          echo "Warning: Binary does not appear to be a Linux ELF binary"
-        fi
-        
-        # Verify it's x86_64/amd64
-        if ! file trackwatch | grep -q "x86-64\|x86_64\|AMD64"; then
-          echo "Warning: Binary does not appear to be AMD64"
-        fi
         
         echo "Binary verification complete"
     continue_on_error: false
