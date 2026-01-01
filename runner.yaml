@@ -167,6 +167,7 @@ steps:
         cd dist
         sha256sum * > checksums.txt
         cat checksums.txt
+        cd ..
         
         echo "Artifacts ready in dist/:"
         ls -lh dist/
